@@ -8,9 +8,9 @@ interface MovieListProps {
   onSelectMovie: (movie: Movie) => void;
 }
 
-export default function MovieList({ movies, onSelectMovie }: MovieListProps) {
+export default function MovieList({ movies, onSelectMovie}: MovieListProps) {
   const [search, setSearch] = useState('');
-  const [sortBy, setSortBy] = useState<'popularity' | 'seats'>('popularity');
+  const [sortBy, setSortBy] = useState<'popularity' | 'alphabetical'>('popularity');
 
   const filteredMovies = movies
     .filter((movie) =>
@@ -20,7 +20,7 @@ export default function MovieList({ movies, onSelectMovie }: MovieListProps) {
     .sort((a, b) =>
       sortBy === 'popularity'
         ? b.popularity - a.popularity
-        : b.availableSeats - a.availableSeats
+        : a.title.localeCompare(b.title)
     );
 
   return (
@@ -33,21 +33,22 @@ export default function MovieList({ movies, onSelectMovie }: MovieListProps) {
             placeholder="Search movies or genres..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="w-full pl-10 pr-4 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+            className="w-full pl-10 pr-4 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent text-black dark:text-gray-900"
           />
         </div>
         <div className="flex items-center gap-2">
           <SlidersHorizontal className="text-gray-400" />
           <select
             value={sortBy}
-            onChange={(e) => setSortBy(e.target.value as 'popularity' | 'seats')}
-            className="border rounded-lg px-4 py-2 focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+            onChange={(e) => setSortBy(e.target.value as 'popularity' | 'alphabetical')}
+            className="border rounded-lg px-4 py-2 focus:ring-2 focus:ring-indigo-500 focus:border-transparent text-black dark:text-gray-900"
           >
             <option value="popularity">Sort by Popularity</option>
-            <option value="seats">Sort by Available Seats</option>
+            <option value="alphabetical">Sort by Name</option>
           </select>
         </div>
       </div>
+
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
         {filteredMovies.map((movie) => (
           <MovieCard key={movie._id} movie={movie} onSelect={onSelectMovie} />

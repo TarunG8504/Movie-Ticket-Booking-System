@@ -1,62 +1,68 @@
+import { useEffect } from 'react';
+
 interface SeatSelectorProps {
-  seats: boolean[][];
-  selectedSeats: string[];
-  onSeatSelect: (seatId: string) => void;
-  desiredSeats: number;
+  seats: boolean[][];  // Matrix of seat availability
+  selectedSeats: string[];  // List of selected seats
+  onSeatSelect: (seatId: string) => void;  // Callback to handle seat selection
+  onConfirmBooking: () => void;  // Callback to handle booking confirmation
+  setTotalPrice: (price: number) => void;
+  seatPrice: number;  // Price per seat
 }
 
 export default function SeatSelector({
   seats,
   selectedSeats,
   onSeatSelect,
-  desiredSeats,
+  onConfirmBooking,
+  setTotalPrice,
+  seatPrice
 }: SeatSelectorProps) {
-  const getSeatColor = (seatId: string, isBooked: boolean) => {
-    if (isBooked) return 'bg-red-500';
-    if (selectedSeats.includes(seatId)) return 'bg-yellow-500';
-    return 'bg-green-500 hover:bg-green-600';
-  };
+
+  useEffect(() => {
+    // Whenever selectedSeats changes, update the total price
+    setTotalPrice(selectedSeats.length * seatPrice);  // Corrected total price calculation
+  }, [selectedSeats, seatPrice, setTotalPrice]); // dependencies
+
+  function toggleSeat(row: number, column: number) {
+    const seatId = `${row}-${column}`;
+    if (seats[row][column]) return;  // Already booked
+
+    onSeatSelect(seatId);  // Update the selected seats via the callback
+  }
 
   return (
-    <div className="bg-white dark:bg-gray-800 rounded-lg p-6 shadow-md">
-      <div className="mb-6">
-        <h3 className="text-lg font-semibold mb-2">Screen</h3>
-        <div className="w-full h-2 bg-gray-300 dark:bg-gray-600 rounded"></div>
-      </div>
-      <div className="grid gap-2 justify-center">
-        {seats.map((row, rowIndex) => (
-          <div key={rowIndex} className="flex gap-2 justify-center">
-            {row.map((isBooked, colIndex) => {
-              const seatId = `${rowIndex}-${colIndex}`;
+    <div className="max-w-4xl mx-auto p-4">
+      <h2 className="text-2xl font-bold mb-2 text-center">Select Your Seats</h2>
+
+      <div className="flex justify-center mb-5">
+        <div className="grid grid-cols-10 gap-3">
+          {seats.map((row, rowIndex) =>
+            row.map((seat, colIndex) => {
+              const isSelected = selectedSeats.includes(`${rowIndex}-${colIndex}`);
               return (
                 <button
-                  key={seatId}
-                  onClick={() => onSeatSelect(seatId)}
-                  disabled={isBooked}
-                  className={`w-8 h-8 rounded ${getSeatColor(seatId, isBooked)} transition-colors ${
-                    isBooked ? 'cursor-not-allowed opacity-50' : ''
-                  }`}
-                  title={`Seat ${seatId}`}
+                  key={`${rowIndex}-${colIndex}`}
+                  onClick={() => toggleSeat(rowIndex, colIndex)}
+                  disabled={seat}  // Disable if the seat is booked
+                  className={`w-8 h-8 rounded ${seat ? 'bg-red-400 cursor-not-allowed' : isSelected ? 'bg-green-500' : 'bg-yellow-500 hover:bg-yellow-400'}`}
                 />
               );
-            })}
-          </div>
-        ))}
-      </div>
-      <div className="mt-6 flex justify-center gap-4">
-        <div className="flex items-center gap-2">
-          <div className="w-4 h-4 bg-green-500 rounded"></div>
-          <span className="text-sm">Available</span>
-        </div>
-        <div className="flex items-center gap-2">
-          <div className="w-4 h-4 bg-yellow-500 rounded"></div>
-          <span className="text-sm">Selected</span>
-        </div>
-        <div className="flex items-center gap-2">
-          <div className="w-4 h-4 bg-red-500 rounded"></div>
-          <span className="text-sm">Booked</span>
+            })
+          )}
         </div>
       </div>
+
+      {selectedSeats.length > 0 && (
+        <div className="text-center">
+          <p className="mb-2">Selected Seats: {selectedSeats.length}</p>
+          <button
+            onClick={onConfirmBooking}  // Handle booking on button click
+            className="bg-indigo-600 text-white px-6 py-2 rounded-lg hover:bg-indigo-700"
+          >
+            Total Price (₹{selectedSeats.length * seatPrice})
+          </button>
+        </div>
+      )}
     </div>
   );
 }

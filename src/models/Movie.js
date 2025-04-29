@@ -6,31 +6,15 @@ const showtimeSchema = new mongoose.Schema({
 });
 
 const movieSchema = new mongoose.Schema({
-  title: {
-    type: String,
-    required: true,
-    index: true
-  },
-  genre: [{
-    type: String,
-    required: true
-  }],
-  popularity: {
-    type: Number,
-    default: 0
-  },
-  poster: {
-    type: String,
-    required: true
-  },
-  showtimes: [showtimeSchema],
-  availableSeats: {
-    type: Number,
-    default: 0
-  }
-}, {
-  timestamps: true
-});
+  title: { type: String, required: true },
+  genre: [{ type: String, required: true }],
+  poster: { type: String, required: true },
+  description: { type: String },
+  duration: { type: Number }, // e.g., 148 minutes
+  releaseDate: { type: Date },
+  popularity: { type: Number, default: 0 }
+}, { timestamps: true });
+
 
 // Text index for search functionality
 movieSchema.index({ title: 'text', 'genre': 'text' });

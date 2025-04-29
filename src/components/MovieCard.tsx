@@ -1,4 +1,4 @@
-import { Clock, Star, Users } from 'lucide-react';
+import { Star } from 'lucide-react';
 import { Movie } from '../types';
 
 interface MovieCardProps {
@@ -28,19 +28,9 @@ export default function MovieCard({ movie, onSelect }: MovieCardProps) {
             </span>
           ))}
         </div>
-        <div className="flex items-center justify-between text-sm text-gray-600 dark:text-gray-300">
-          <div className="flex items-center gap-1">
-            <Star className="h-4 w-4 text-yellow-500" />
-            <span>{movie.popularity.toFixed(1)}</span>
-          </div>
-          <div className="flex items-center gap-1">
-            <Users className="h-4 w-4" />
-            <span>{movie.availableSeats} seats</span>
-          </div>
-          <div className="flex items-center gap-1">
-            <Clock className="h-4 w-4" />
-            <span>{movie.showtimes.length} shows</span>
-          </div>
+        <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-300">
+          <Star className="h-4 w-4 text-yellow-500" />
+          <span>{movie.popularity.toFixed(1)}</span>
         </div>
         <button
           onClick={() => onSelect(movie)}

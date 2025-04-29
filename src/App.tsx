@@ -5,22 +5,29 @@ import MovieList from './components/MovieList';
 import ShowtimeSelector from './components/ShowtimeSelector';
 import SeatSelector from './components/SeatSelector';
 import BookingSummary from './components/BookingSummary';
-import QueueModal from './components/QueueModal';
 import MyBookings from './components/MyBookings';
-import { Movie, BookingDetails } from './types';
+import { Movie, BookingDetails, Theater, Showtime } from './types';
 
 function App() {
   const [token, setToken] = useState<string | null>(localStorage.getItem('token'));
   const [isDarkMode, setIsDarkMode] = useState(false);
+  const [view, setView] = useState<'main' | 'bookings'>('main');
+
+  const [movies, setMovies] = useState<Movie[]>([]);
+  const [theaters, setTheaters] = useState<Theater[]>([]);
+
   const [selectedMovie, setSelectedMovie] = useState<Movie | null>(null);
-  const [selectedShowtime, setSelectedShowtime] = useState<string | null>(null);
+  const [selectedTheater, setSelectedTheater] = useState<Theater | null>(null);
+  const [selectedDate, setSelectedDate] = useState<string | null>(null);
+  const [selectedShowtime, setSelectedShowtime] = useState<Showtime | null>(null);
+
+  const [seats, setSeats] = useState<boolean[][]>([]);
   const [selectedSeats, setSelectedSeats] = useState<string[]>([]);
   const [desiredSeats, setDesiredSeats] = useState(2);
-  const [isInQueue, setIsInQueue] = useState(false);
   const [booking, setBooking] = useState<BookingDetails | null>(null);
-  const [movies, setMovies] = useState<Movie[]>([]);
-  const [seats, setSeats] = useState<boolean[][]>([]);
-  const [view, setView] = useState<'main' | 'bookings'>('main');
+  const [hasProceed, setHasProceed] = useState(false);
+  const [totalPrice, setTotalPrice] = useState(0);
+  const [seatPrice, setSeatPrice] = useState<number>(0);
 
   const handleAuthSuccess = (newToken: string) => {
     localStorage.setItem('token', newToken);
@@ -30,54 +37,21 @@ function App() {
   const handleLogout = () => {
     localStorage.removeItem('token');
     setToken(null);
-    setSelectedMovie(null);
-    setSelectedShowtime(null);
-    setSelectedSeats([]);
-    setBooking(null);
+    resetSelections();
     setView('main');
   };
 
-  useEffect(() => {
-    if (token) {
-      fetch('/api/movies', {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      })
-        .then((res) => res.json())
-        .then(setMovies)
-        .catch(console.error);
-    }
-  }, [token]);
-
-  useEffect(() => {
-    if (selectedMovie && selectedShowtime && token) {
-      fetch(`/api/movies/${selectedMovie._id}/seats?time=${encodeURIComponent(selectedShowtime)}`, {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-        },
-      })
-        .then(async (res) => {
-          if (!res.ok) {
-            const error = await res.json().catch(() => ({ message: 'Unknown error' }));
-            throw new Error(error.message || 'Failed to fetch seats');
-          }
-          return res.json();
-        })
-        .then((data) => {
-          if (Array.isArray(data)) {
-            setSeats(data);
-          } else {
-            throw new Error('Invalid seat data');
-          }
-        })
-        .catch((err) => {
-          console.error('Error loading seats:', err.message);
-          setSeats([]); // Prevent .map crash
-        });
-    }
-  }, [selectedMovie, selectedShowtime, token]);  
-  
+  const resetSelections = () => {
+    setSelectedMovie(null);
+    setSelectedTheater(null);
+    setSelectedDate('');
+    setSelectedShowtime(null);
+    setSelectedSeats([]);
+    setSeatPrice(0);
+    setTotalPrice(0);
+    setHasProceed(false);
+    setBooking(null);
+  };
 
   const handleSeatSelection = (seatId: string) => {
     if (selectedSeats.includes(seatId)) {
@@ -88,30 +62,102 @@ function App() {
   };
 
   const handleBooking = async () => {
-    if (!token) return;
+    if (!token || !selectedMovie || !selectedTheater || !selectedShowtime || !selectedDate) {
+      alert('Please fill all the required fields');
+      return;
+    }
 
     try {
-      setIsInQueue(true);
+      const formattedSeats = selectedSeats.map(seatId => {
+        const [row, column] = seatId.split('-').map(Number);
+        return { row, column };
+      });
+
       const response = await fetch('/api/bookings', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
+          'Authorization': `Bearer ${token}`,
         },
         body: JSON.stringify({
-          movieId: selectedMovie?._id,
-          showtime: selectedShowtime,
-          seats: selectedSeats,
+          movieId: selectedMovie._id,
+          theaterId: selectedTheater._id,
+          date: selectedDate.split('T')[0],
+          time: selectedShowtime.time,
+          seats: formattedSeats,
+          totalPrice,
         }),
       });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        let errorMessage;
+        try {
+          const errorData = JSON.parse(errorText);
+          errorMessage = errorData.message || 'Booking failed';
+        } catch {
+          errorMessage = errorText || 'Booking failed';
+        }
+        throw new Error(errorMessage);
+      }
+
       const bookingDetails = await response.json();
-      setIsInQueue(false);
       setBooking(bookingDetails);
+      resetSelections();
+      setView('main');
+      setSelectedMovie(null);
+      alert('Booking successful!');
+
     } catch (error) {
-      console.error('Booking failed:', error);
-      setIsInQueue(false);
+      alert(`Booking failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   };
+
+  useEffect(() => {
+    if (token) {
+      fetch('/api/movies', {
+        headers: { Authorization: `Bearer ${token}` },
+      })
+        .then((res) => res.json())
+        .then(setMovies)
+        .catch(console.error);
+    }
+  }, [token]);
+
+  useEffect(() => {
+    if (selectedMovie && token) {
+      fetch(`/api/movies/${selectedMovie._id}/theaters`, {
+        headers: { Authorization: `Bearer ${token}` },
+      })
+        .then((res) => res.json())
+        .then(setTheaters)
+        .catch((err) => {
+          console.error('Error loading theaters:', err.message);
+          setTheaters([]);
+        });
+    }
+  }, [selectedMovie, token]);
+
+  useEffect(() => {
+    if (selectedMovie && selectedShowtime && selectedTheater && selectedDate && token && hasProceed) {
+      fetch(`/api/movies/${selectedMovie._id}/seats?theaterId=${selectedTheater._id}&showtime=${selectedShowtime.time}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      })
+        .then((res) => res.json())
+        .then((data: boolean[][]) => {
+          setSeats(data);
+          setSelectedSeats([]);
+        })
+        .catch(console.error);
+    }
+  }, [selectedMovie, selectedShowtime, selectedTheater, selectedDate, token, hasProceed]);
+
+  // Update selectedSeats when desiredSeats is changed and is less than the current selection
+  useEffect(() => {
+    if (desiredSeats < selectedSeats.length) {
+      setSelectedSeats([]); // Reset selectedSeats if desiredSeats is smaller
+    }
+  }, [desiredSeats, selectedSeats.length]);
 
   if (!token) {
     return <AuthForm onSuccess={handleAuthSuccess} />;
@@ -126,43 +172,81 @@ function App() {
           onLogout={handleLogout}
         />
 
-        <div className="flex justify-end px-6 py-4">
-          <button
-            onClick={() => setView(view === 'main' ? 'bookings' : 'main')}
-            className="text-indigo-600 dark:text-indigo-400 hover:underline"
-          >
-            {view === 'main' ? 'My Bookings' : 'Back to Home'}
-          </button>
-        </div>
-
         <main className="container mx-auto px-4 py-8">
           {view === 'bookings' ? (
-            <MyBookings token={token} />
+            <MyBookings
+              token={token}
+              setView={setView}
+            />
           ) : !selectedMovie ? (
-            <MovieList movies={movies} onSelectMovie={setSelectedMovie} />
-          ) : !selectedShowtime ? (
+            <>
+              {/* My Bookings / Back Button */}
+              <div className="flex justify-end mb-4">
+                <button
+                  onClick={() => setView(view === 'main' ? 'bookings' : 'main')}
+                  className="text-indigo-600 dark:text-indigo-400 hover:underline"
+                >
+                  {view === 'main' ? 'My Bookings' : 'Back to Home'}
+                </button>
+              </div>
+              <MovieList
+                movies={movies}
+                onSelectMovie={(movie) => {
+                  resetSelections();
+                  setSelectedMovie(movie);
+                }}
+              />
+            </>
+          ) : !hasProceed ? (
             <div>
-              <button
-                onClick={() => setSelectedMovie(null)}
-                className="mb-4 text-indigo-600 dark:text-indigo-400"
-              >
-                ← Back to Movies
-              </button>
+              {/* ✅ Updated: Buttons on same line */}
+              <div className="flex justify-between items-center mb-4">
+                <button
+                  onClick={() => setSelectedMovie(null)}
+                  className="text-indigo-600 dark:text-indigo-400 hover:underline"
+                >
+                  ← Back to Movies
+                </button>
+                <button
+                  onClick={() => setView(view === 'main' ? 'bookings' : 'main')}
+                  className="text-indigo-600 dark:text-indigo-400 hover:underline"
+                >
+                  {view === 'main' ? 'My Bookings' : 'Back to Home'}
+                </button>
+              </div>
               <ShowtimeSelector
-                showtimes={selectedMovie.showtimes}
-                selectedShowtimeId={selectedShowtime}
-                onSelectShowtime={setSelectedShowtime}
+                movieId={selectedMovie._id}
+                theaters={theaters}
+                onProceed={(theater, date, showtime) => {
+                  setSelectedTheater(theater);
+                  setSelectedDate(date);
+                  setSelectedShowtime(showtime);
+                  setSeatPrice(showtime.seatPrice || 0);
+                  setHasProceed(true);
+                }}
               />
             </div>
           ) : (
             <div>
-              <button
-                onClick={() => setSelectedShowtime(null)}
-                className="mb-4 text-indigo-600 dark:text-indigo-400"
-              >
-                ← Back to Showtimes
-              </button>
-              <div className="space-y-6">
+              <div className="flex justify-between items-center mb-4">
+                <button
+                  onClick={() => {
+                    setHasProceed(false);
+                    setSelectedShowtime(null);
+                  }}
+                  className="text-indigo-600 dark:text-indigo-400 hover:underline"
+                >
+                  ← Back to Showtimes
+                </button>
+                <button
+                  onClick={() => setView(view === 'main' ? 'bookings' : 'main')}
+                  className="text-indigo-600 dark:text-indigo-400 hover:underline"
+                >
+                  {view === 'main' ? 'My Bookings' : 'Back to Home'}
+                </button>
+              </div>
+
+              <div>
                 <div className="flex items-center gap-4">
                   <label className="text-sm">Number of seats:</label>
                   <select
@@ -181,37 +265,25 @@ function App() {
                   seats={seats}
                   selectedSeats={selectedSeats}
                   onSeatSelect={handleSeatSelection}
-                  desiredSeats={desiredSeats}
+                  onConfirmBooking={handleBooking}
+                  setTotalPrice={setTotalPrice}
+                  seatPrice={seatPrice}
                 />
-                <div className="flex justify-center">
-                  <button
-                    onClick={handleBooking}
-                    disabled={selectedSeats.length !== desiredSeats}
-                    className="bg-indigo-600 text-white px-6 py-2 rounded-lg hover:bg-indigo-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    Confirm Booking
-                  </button>
-                </div>
               </div>
             </div>
           )}
         </main>
 
-        {isInQueue && <QueueModal position={3} estimatedTime={5} />}
         {booking && (
           <BookingSummary
             booking={booking}
             onClose={() => {
               setBooking(null);
-              setSelectedMovie(null);
-              setSelectedShowtime(null);
-              setSelectedSeats([]);
+              resetSelections();
             }}
             onViewBookings={() => {
               setBooking(null);
-              setSelectedMovie(null);
-              setSelectedShowtime(null);
-              setSelectedSeats([]);
+              resetSelections();
               setView('bookings');
             }}
           />
