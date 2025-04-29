@@ -79,6 +79,7 @@ function App() {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`,
         },
+        
         body: JSON.stringify({
           movieId: selectedMovie._id,
           theaterId: selectedTheater._id,

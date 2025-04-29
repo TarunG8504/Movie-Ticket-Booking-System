@@ -5,7 +5,7 @@ import { generateBookingId } from '../utils/helpers.js';
 
 // POST /api/bookings
 export const createBooking = async (req, res) => {
-  const { movieId, theaterId, date, time, seats, totalPrice } = req.body;
+  const { movieId, theaterId, date, time, seats, totalPrice, theaterName } = req.body;
 
   try {
     // Extract userId from JWT token (assuming the token is in the Authorization header)
@@ -54,6 +54,7 @@ export const createBooking = async (req, res) => {
       userId,
       movieId,
       theaterId,
+      theaterName,
       date,
       time,
       seats,
