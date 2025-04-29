@@ -45,7 +45,8 @@ export interface BookingDetails {
   _id: string;
   movieId: string;
   theaterId: string;
-  showtime: string;
+  theaterName: string;
+  time: string;
   seats: {
     row: number;
     column: number;

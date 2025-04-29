@@ -120,14 +120,20 @@ export default function MyBookings({ token, setView }: MyBookingsProps) {
                 <p className="text-sm text-gray-500 dark:text-gray-400">Movie</p>
                 <p className="font-semibold">{booking.movieDetails?.title || booking.movieId}</p>
 
+                <p className="text-sm text-gray-500 dark:text-gray-400">Theater</p>
+                <p className="font-semibold">{booking?.theaterName || booking.theaterId}</p>
+
+                <p className="text-sm text-gray-500 dark:text-gray-400">Date</p>
+                <p className="font-semibold">{booking.date.toString().split('T')[0]}</p>
+
                 <p className="text-sm text-gray-500 dark:text-gray-400">Showtime</p>
-                <p>{booking.showtime}</p>
+                <p>{booking.time}</p>
 
                 <p className="text-sm text-gray-500 dark:text-gray-400">Seats</p>
                 <p>{booking.seats.map(seat => `R${seat.row + 1}-C${seat.column + 1}`).join(', ')}</p>
 
                 <p className="text-sm text-gray-500 dark:text-gray-400">Total</p>
-                <p>${booking.totalPrice.toFixed(2)}</p>
+                <p>₹{booking.totalPrice.toFixed(2)}</p>
               </div>
             </div>
           </div>

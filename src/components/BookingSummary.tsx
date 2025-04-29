@@ -28,7 +28,7 @@ export default function BookingSummary({ booking, onClose, onViewBookings }: Boo
           </div>
           <div className="flex items-center justify-between">
             <span className="text-gray-600 dark:text-gray-400">Total:</span>
-            <span>${booking.totalPrice.toFixed(2)}</span>
+            <span>₹{booking.totalPrice.toFixed(2)}</span>
           </div>
         </div>
         <div className="mt-8 flex justify-center gap-4">

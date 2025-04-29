@@ -82,6 +82,7 @@ function App() {
         body: JSON.stringify({
           movieId: selectedMovie._id,
           theaterId: selectedTheater._id,
+          theaterName: selectedTheater.name,
           date: selectedDate.split('T')[0],
           time: selectedShowtime.time,
           seats: formattedSeats,
